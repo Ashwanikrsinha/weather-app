@@ -5,6 +5,8 @@ import InputForm from "./InputForm";
 import WeatherCard from "./WeatherCard";
 import axios from "axios";
 import Search from "./component/search";
+import dotenv from 'dotenv'; 
+dotenv.config();
 
 function App() {
   const [data, setData] = useState({});
