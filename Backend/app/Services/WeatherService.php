@@ -12,7 +12,7 @@ class WeatherService
 {
     protected $apiBaseUrl;
     protected $apiKey;
-    protected $cacheDuration = 600; // Cache duration in seconds (10 minutes )
+    protected $cacheDuration = 6; // Cache duration in seconds (10 minutes )
 
     public function __construct()
     {
@@ -62,7 +62,7 @@ class WeatherService
     protected function getCityData($query)
     {
         // Fetch the city data from the database
-        return City::where('name', $query)->get();
+        return City::where('name', 'LIKE', "%{$query}%")->get();
     }
 
     protected function storeCityData($location)
@@ -108,9 +108,42 @@ class WeatherService
                 $weatherData = $response->json();
 
                 // Store weather forecast in the database
-                $this->storeWeatherData($weatherData);
+                $data = $this->storeWeatherData($weatherData);
+                $cityData = [
+                    'id' => $data->id,
+                    'name' => $data->name,
+                    'country' => $data->country,
+                    'latitude' => $data->latitude,
+                    'longitude' => $data->longitude,
+                    'date' => $data->created_at,
+                ];
 
-                return $weatherData;
+                $weatherData = [
+                    'temperature' => $data->weatherForecast->temperature,
+                    'feels_like' => $data->weatherForecast->feels_like,
+                    'temp_min' => $data->weatherForecast->temp_min,
+                    'temp_max' => $data->weatherForecast->temp_max,
+                    'pressure' => $data->weatherForecast->pressure,
+                    'humidity' => $data->weatherForecast->humidity,
+                    'wind_speed' => $data->weatherForecast->wind_speed,
+                    'sea_level' => $data->weatherForecast->sea_level,
+                    'grnd_level' => $data->weatherForecast->grnd_level,
+                    'visibility' => $data->weatherForecast->visibility,
+                    'cloud_percent' => $data->weatherForecast->cloud_percent,
+                    'main_description' => $data->weatherForecast->main_description,
+                    'description' => $data->weatherForecast->description,
+                    'sunrise' => $data->weatherForecast->sunrise,
+                    'sunset' => $data->weatherForecast->sunset,
+                    'data_time' => $data->weatherForecast->data_time,
+                    'icon' => $weatherData['weather'][0]['icon'] ?? null,
+                    'weather_data' => $data->weatherForecast->weather_data,
+                ];
+
+                return [
+                    'city' => $cityData,
+                    'weather' => $weatherData,
+                ];
+                // return $weatherData;
             }
 
             // Handle API request failure
@@ -142,8 +175,22 @@ class WeatherService
         $sunset = isset($weatherData['sys']['sunset']) ? Carbon::createFromTimestampUTC($weatherData['sys']['sunset']) : null;
         $dataTime = isset($weatherData['dt']) ? Carbon::createFromTimestampUTC($weatherData['dt']) : null;
 
-        // Find or create the associated city based on name
-        $city = City::firstOrCreate(['name' => $cityName], [
+        // $city = City::where('name', $cityName)->first();
+        // return $city;
+        // if (!$city) {
+            // If city does not exist, create a new city record
+            // $city = City::updateOrCreate(
+            //     ['name' => $cityName],
+            //     [
+            //     'country' => $country,
+            //     'latitude' => $latitude,
+            //     'longitude' => $longitude,
+            // ]);
+        // }
+        $city = City::firstOrCreate([
+            'latitude' => $latitude,
+            'longitude' => $longitude
+            ], [
             'name' => $cityName,
             'country' => $country,
             'latitude' => $latitude,
@@ -170,9 +217,10 @@ class WeatherService
                 'sunrise' => $sunrise,
                 'sunset' => $sunset,
                 'data_time' => $dataTime,
-                'weather_data' => $weatherData, // Store the entire weather data in JSON format if needed
+                'weather_data' => json_encode($weatherData), // Store the entire weather data in JSON format if needed
             ]
         );
+        return $city;
     }
 
 }
