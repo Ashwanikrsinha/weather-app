@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\WeatherService;
-use Illuminate\Http\Request;
+use App\Http\Requests\SearchCityRequest;
+use App\Http\Requests\WeatherByCoordinatesRequest;
 
 class WeatherController extends Controller
 {
@@ -14,13 +15,9 @@ class WeatherController extends Controller
         $this->weatherService = $weatherService;
     }
 
-    public function searchCity(Request $request)
+    public function searchCity(SearchCityRequest $request)
     {
-        $validatedData = $request->validate([
-            'query' => 'required|string|max:255', // 'query' parameter is required and must be a string (maximum length 255)
-        ]);
-
-        $query = $validatedData['query'];
+        $query = $request->validated()['query'];
 
         try {
             $locations = $this->weatherService->searchCityByName($query);
@@ -30,13 +27,9 @@ class WeatherController extends Controller
         }
     }
 
-    public function getWeatherByCoordinates(Request $request)
+    public function getWeatherByCoordinates(WeatherByCoordinatesRequest $request)
     {
-        $validatedData = $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-
+        $validatedData =  $validated = $request->validated();
         $latitude = $validatedData['latitude'];
         $longitude = $validatedData['longitude'];
 
